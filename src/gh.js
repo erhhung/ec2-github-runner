@@ -1,17 +1,18 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
-const _ = require('lodash');
 const config = require('./config');
+const _ = require('lodash');
 
-// use the unique label to find the runner
 // as we don't have the runner's id, it's not possible to get it in any other way
-async function getRunner(label) {
+async function getRunner(labels) {
   const octokit = github.getOctokit(config.input.githubToken);
 
   try {
-    const runners = await octokit.paginate('GET /repos/{owner}/{repo}/actions/runners', config.githubContext);
-    const foundRunners = _.filter(runners, { labels: [{ name: label }] });
-    return foundRunners.length > 0 ? foundRunners[0] : null;
+    let runners = await octokit.paginate('GET /repos/{owner}/{repo}/actions/runners', config.githubContext);
+    for (const label of labels.split(',').map(s => s.trim())) {
+      runners = _.filter(runners, { labels: [{ name: label }] });
+    }
+    return runners.length > 0 ? runners[0] : null;
   } catch (error) {
     return null;
   }
@@ -23,21 +24,21 @@ async function getRegistrationToken() {
 
   try {
     const response = await octokit.request('POST /repos/{owner}/{repo}/actions/runners/registration-token', config.githubContext);
-    core.info('GitHub Registration Token is received');
+    core.info('GitHub registration token has been received');
     return response.data.token;
   } catch (error) {
-    core.error('GitHub Registration Token receiving error');
+    core.error('GitHub registration token receiving error');
     throw error;
   }
 }
 
 async function removeRunner() {
-  const runner = await getRunner(config.input.labels);
   const octokit = github.getOctokit(config.input.githubToken);
 
-  // skip the runner removal process if the runner is not found
+  // skip the removal process if the runner is not found
+  const runner = await getRunner(config.input.labels);
   if (!runner) {
-    core.info(`GitHub self-hosted runner with label ${config.input.labels} is not found, so the removal is skipped`);
+    core.info(`GitHub self-hosted runner with labels ${config.input.labels} is not found, so the removal is skipped`);
     return;
   }
 

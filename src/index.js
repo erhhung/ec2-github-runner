@@ -1,11 +1,11 @@
+const core = require('@actions/core');
+const config = require('./config');
 const aws = require('./aws');
 const gh = require('./gh');
-const config = require('./config');
-const core = require('@actions/core');
 
-function setOutput(labels, ec2InstanceId) {
+function setOutput(labels, instanceId) {
   core.setOutput('labels', labels);
-  core.setOutput('ec2-instance-id', ec2InstanceId);
+  core.setOutput('ec2-instance-id', instanceId);
 }
 
 async function start() {
@@ -15,10 +15,12 @@ async function start() {
     labels += ',';
   }
   labels += unique;
-  const githubRegistrationToken = await gh.getRegistrationToken();
-  const ec2InstanceId = await aws.startEc2Instance(labels, githubRegistrationToken);
-  setOutput(labels, ec2InstanceId);
-  await aws.waitForInstanceRunning(ec2InstanceId);
+
+  const regToken = await gh.getRegistrationToken();
+  const instanceId = await aws.startEc2Instance(labels, regToken);
+  setOutput(labels, instanceId);
+
+  await aws.waitForInstanceRunning(instanceId);
   await gh.waitForRunnerRegistered(unique);
 }
 
