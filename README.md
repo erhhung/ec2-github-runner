@@ -17,9 +17,25 @@ And all this automatically as a part of your GitHub Actions workflow.
 
 ![GitHub Actions self-hosted EC2 runner](docs/images/github-actions-summary.png)
 
-See [below](#example) the YAML code of the depicted workflow. <br><br>
+*See [below](#example) for the YAML code that depicts this workflow.* <br><br>
 
-**Table of Contents**
+## Downstream changes
+
+The following changes were made in **this fork** of the upstream GitHub repo [machulav/ec2-github-runner](https://github.com/machulav/ec2-github-runner):
+
+- Added support for launching a **Spot instance** (see input `spot-instance`).
+- Renamed `label` input to **`labels`** that accepts one or more labels (in CSV form) to the runner's `config.sh` script. <br>
+  The `label` output is similarly renamed to **`labels`** and is the set of input labels, if any, plus a randomly generated ID.
+- EC2 instance user data script always installs the **latest version** of the [GitHub Actions Runner](https://github.com/actions/runner/releases/latest). <br>
+  *(This may or may not cause an issue).*
+- `pre-runner-script` input can span more than one line (improved creation of the `pre-runner-script.sh` file).
+- Added `--unattended` as an extra parameter to the runner's `config.sh` script (see [issue #197](https://github.com/machulav/ec2-github-runner/issues/197)).
+
+**NOTE:** Due to the renaming of an input parameter, the major version (at time fork) has been bumped from the upstream release.
+
+<br>
+
+## Table of contents
 
 - [Use cases](#use-cases)
   - [Access private resources in your VPC](#access-private-resources-in-your-vpc)
@@ -33,7 +49,7 @@ See [below](#example) the YAML code of the depicted workflow. <br><br>
   - [Example](#example)
   - [Real user examples](#real-user-examples)
 - [Self-hosted runner security with public repositories](#self-hosted-runner-security-with-public-repositories)
-- [License Summary](#license-summary)
+- [License summary](#license-summary)
 
 ## Use cases
 
@@ -48,11 +64,16 @@ For example, you can access your database in the private subnet to run the datab
 
 GitHub provides one fixed hardware configuration for their Linux virtual machines: 2-core CPU, 7 GB of RAM, 14 GB of SSD disk space.
 
-Some of your CI workloads may require more powerful hardware than GitHub-hosted runners provide.
-In the action, you can configure any EC2 instance type for your runner that AWS provides.
+Some of your CI workloads may require more powerful hardware than GitHub-hosted runners provide or ARM-based CPUs that the free plan currently doesn't provide.
 
-For example, you may run a c5.4xlarge EC2 runner for some of your compute-intensive workloads.
-Or r5.xlarge EC2 runner for workloads that process large data sets in memory.
+In the action, you can configure any EC2 instance type for your runner that AWS provides, such as one with ARM-based Graviton CPUs.
+
+For example, you may run a `c5.4xlarge` EC2 runner for some of your compute-intensive workloads, or a `r5.xlarge` EC2 runner for workloads that process large data sets in memory.
+
+### Run jobs longer than 6 hours
+
+GitHub-hosted runners have a hard [limit of 6 hours](https://docs.github.com/en/actions/administering-github-actions/usage-limits-billing-and-administration#usage-limits) for a job to complete,
+so if you are exceeding that limit, use a self-hosted runner that extends that [limit to 5 days](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#usage-limits).
 
 ### Save costs
 
@@ -76,7 +97,7 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
 
 1. Create new AWS access keys for the new or an existing IAM user with the following least-privilege minimum required permissions:
 
-   ```
+   ```json
    {
      "Version": "2012-10-17",
      "Statement": [
@@ -96,50 +117,50 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
 
    If you plan to attach an IAM role to the EC2 runner with the `iam-role-name` parameter, you will need to allow additional permissions:
 
-   ```
+   ```json
    {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          "ec2:ReplaceIamInstanceProfileAssociation",
-          "ec2:AssociateIamInstanceProfile"
-        ],
-        "Resource": "*"
-      },
-      {
-        "Effect": "Allow",
-        "Action": "iam:PassRole",
-        "Resource": "*"
-      }
-    ]
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "ec2:ReplaceIamInstanceProfileAssociation",
+           "ec2:AssociateIamInstanceProfile"
+         ],
+         "Resource": "*"
+       },
+       {
+         "Effect": "Allow",
+         "Action": "iam:PassRole",
+         "Resource": "*"
+       }
+     ]
    }
    ```
 
    If you use the `aws-resource-tags` parameter, you will also need to allow the permissions to create tags:
 
-   ```
+   ```json
    {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          "ec2:CreateTags"
-        ],
-        "Resource": "*",
-        "Condition": {
-          "StringEquals": {
-            "ec2:CreateAction": "RunInstances"
-          }
-        }
-      }
-    ]
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "ec2:CreateTags"
+         ],
+         "Resource": "*",
+         "Condition": {
+           "StringEquals": {
+             "ec2:CreateAction": "RunInstances"
+           }
+         }
+       }
+     ]
    }
    ```
 
-   These example policies above are provided as a guide. They can and most likely should be limited even more by specifying the resources you use.
+   These example policies above are provided as a guide. They can—and most likely should be—limited even more by specifying the actual resources you will use.
 
 2. Add the keys to GitHub secrets.
 3. Use the [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials) action to set up the keys as environment variables.
@@ -153,16 +174,14 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
 **3. Prepare EC2 image**
 
 1. Create a new EC2 instance based on any Linux distribution you need.
-2. Connect to the instance using SSH, install `docker` and `git`, then enable `docker` service.
+2. Connect to the instance using Systems Manager, install `git` and `docker`, and then enable the `docker` daemon.
 
-   For Amazon Linux 2, it looks like the following:
+   For **Amazon Linux 2023**, it looks like the following:
 
-   ```
-    sudo yum update -y && \
-    sudo yum install docker -y && \
-    sudo yum install git -y && \
-    sudo yum install libicu -y && \
-    sudo systemctl enable docker
+   ```bash
+   sudo dnf update && \
+   sudo dnf install -y git docker libicu && \
+   sudo systemctl enable docker
    ```
 
    For other Linux distributions, it could be slightly different.
@@ -194,43 +213,43 @@ Now you're ready to go!
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Required                                   | Description                                                                                                                                                                                                                                                                                                                           |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mode`                                                                                                                                                                       | Always required.                           | Specify here which mode you want to use: <br> - `start` - to start a new runner; <br> - `stop` - to stop the previously created runner.                                                                                                                                                                                               |
-| `github-token`                                                                                                                                                               | Always required.                           | GitHub Personal Access Token with the `repo` scope assigned.                                                                                                                                                                                                                                                                          |
-| `ec2-image-id`                                                                                                                                                               | Required if you use the `start` mode.      | EC2 Image Id (AMI). <br><br> The new runner will be launched from this image. <br><br> The action is compatible with Amazon Linux 2 images.                                                                                                                                                                                           |
-| `ec2-instance-type`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Instance Type.                                                                                                                                                                                                                                                                                                                    |
-| `subnet-id`                                                                                                                                                                  | Required if you use the `start` mode.      | VPC Subnet Id. <br><br> The subnet should belong to the same VPC as the specified security group.                                                                                                                                                                                                                                     |
-| `security-group-id`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Security Group Id. <br><br> The security group should belong to the same VPC as the specified subnet. <br><br> Only the outbound traffic for port 443 should be allowed. No inbound traffic is required.                                                                                                                          |
-| `label`                                                                                                                                                                      | Required if you use the `stop` mode.       | Name of the unique label assigned to the runner. <br><br> The label is provided by the output of the action in the `start` mode. <br><br> The label is used to remove the runner from GitHub when the runner is not needed anymore.                                                                                                   |
-| `ec2-instance-id`                                                                                                                                                            | Required if you use the `stop` mode.       | EC2 Instance Id of the created runner. <br><br> The id is provided by the output of the action in the `start` mode. <br><br> The id is used to terminate the EC2 instance when the runner is not needed anymore.                                                                                                                      |
+| `mode`                                                                                                                                                                       | Always required.                           | Specify here which mode you want to use: <br> - `start` - to start a new runner; <br> - `stop` - to stop the previously created runner. |
+| `github-token`                                                                                                                                                               | Always required.                           | GitHub Personal Access Token with the `repo` scope assigned. |
+| `ec2-image-id`                                                                                                                                                               | Required if you use the `start` mode.      | EC2 Image ID (AMI). <br><br> The new runner will be launched from this image. <br><br> The action is compatible with Amazon Linux 2 images. |
+| `ec2-instance-type`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Instance Type. |
+| `subnet-id`                                                                                                                                                                  | Required if you use the `start` mode.      | VPC Subnet ID. <br><br> The subnet should belong to the same VPC as the specified security group. |
+| `security-group-id`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Security Group ID. <br><br> The security group should belong to the same VPC as the specified subnet. <br><br> Only the outbound traffic for port 443 should be allowed. No inbound traffic is required. |
+| `labels`                                                                                                                                                                     | Required if you use the `stop` mode.       | Name(s) (in CSV form) of unique labels to assign to the runner. <br><br> These labels will be appended to by the output of the action in the `start` mode to include a unique ID. <br><br> Use these labels to remove the runner from GitHub when the runner is no longer needed. |
+| `ec2-instance-id`                                                                                                                                                            | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> The ID is provided by the output of the action in the `start` mode. <br><br> The ID is used to terminate the EC2 instance when the runner is not needed anymore. |
 | `iam-role-name`                                                                                                                                                              | Optional. Used only with the `start` mode. | IAM role name to attach to the created EC2 runner. <br><br> This allows the runner to have permissions to run additional actions within the AWS account, without having to manage additional GitHub secrets and AWS users. <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
-| `aws-resource-tags`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies tags to add to the EC2 instance and any attached storage. <br><br> This field is a stringified JSON array of tag objects, each containing a `Key` and `Value` field (see example below). <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above).                         |
-| `runner-home-dir`                                                                                                                                                              | Optional. Used only with the `start` mode. | Specifies a directory where pre-installed actions-runner software and scripts are located.<br><br> |
-| `pre-runner-script`                                                                                                                                                              | Optional. Used only with the `start` mode. | Specifies bash commands to run before the runner starts.  It's useful for installing dependencies with apt-get, yum, dnf, etc. For example:<pre>          - name: Start EC2 runner<br>            with:<br>              mode: start<br>              ...<br>              pre-runner-script: \|<br>                 sudo yum update -y && \ <br>                 sudo yum install docker git libicu -y<br>                 sudo systemctl enable docker</pre>
+| `spot-instance`                                                                                                                                                              | Optional. Used only with the `start` mode. | `true` to launch the instance in Spot mode with default options. |
+| `aws-resource-tags`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies tags to add to the EC2 instance and any attached storage. <br><br> This field is a stringified JSON array of tag objects, each containing a `Key` and `Value` field (see example below). <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
+| `runner-home-dir`                                                                                                                                                            | Optional. Used only with the `start` mode. | Specifies a directory where pre-installed actions-runner software and scripts are located.<br><br> |
+| `pre-runner-script`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies bash commands to run before the runner starts.  It's useful for installing dependencies with apt-get, yum, dnf, etc. For example:<pre>          - name: Start EC2 runner<br>            with:<br>              mode: start<br>              ...<br>              pre-runner-script: \|<br>                 sudo yum update -y && \ <br>                 sudo yum install docker git libicu -y<br>                 sudo systemctl enable docker</pre>
 <br><br> |
 
 ### Environment variables
 
 In addition to the inputs described above, the action also requires the following environment variables to access your AWS account:
 
-- `AWS_DEFAULT_REGION`
-- `AWS_REGION`
+- `AWS_DEFAULT_REGION` or `AWS_REGION`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 
-We recommend using [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials) action right before running the step for creating a self-hosted runner. This action perfectly does the job of setting the required environment variables.
+We recommend using the [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials) action right before running the step for creating a self-hosted runner. This action perfectly does the job of setting the required environment variables.
 
 ### Outputs
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description                                                                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`                                                                                                                                                                      | Name of the unique label assigned to the runner. <br><br> The label is used in two cases: <br> - to use as the input of `runs-on` property for the following jobs; <br> - to remove the runner from GitHub when it is not needed anymore. |
-| `ec2-instance-id`                                                                                                                                                            | EC2 Instance Id of the created runner. <br><br> The id is used to terminate the EC2 instance when the runner is not needed anymore.                                                                                                       |
+| `labels`                                                                                                                                                                     | Name(s) (in CSV form) of input labels, if any, plus a unique label assigned to the runner. <br><br> These labels are used in two cases: <br> - to use in the `runs-on` list property of subsequent jobs; <br> - to remove the runner from GitHub when it is no longer needed. |
+| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> The ID is used to terminate the EC2 instance when the runner is not needed anymore. |
 
 ### Example
 
 The workflow showed in the picture above and declared in `do-the-job.yml` looks like this:
 
-```yml
+```yaml
 name: do-the-job
 on: pull_request
 jobs:
@@ -238,18 +257,18 @@ jobs:
     name: Start self-hosted EC2 runner
     runs-on: ubuntu-latest
     outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
+      labels: ${{ steps.start-ec2-runner.outputs.labels }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Start EC2 runner
         id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2
+        uses: erhhung/ec2-github-runner@v3
         with:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
@@ -276,20 +295,20 @@ jobs:
       - start-runner # required to get output from the start-runner job
       - do-the-job # required to wait when the main job is done
     runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    if: ${{ always() }} # required to stop the runner even if errors occurred in previous jobs
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
+        uses: erhhung/ec2-github-runner@v3
         with:
           mode: stop
+          labels: ${{ needs.start-runner.outputs.labels }}
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          label: ${{ needs.start-runner.outputs.label }}
           ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
 ```
 
@@ -307,6 +326,6 @@ If you use this action in your workflow, feel free to add your story there as we
 
 Please find more details about this security note on [GitHub documentation](https://docs.github.com/en/free-pro-team@latest/actions/hosting-your-own-runners/about-self-hosted-runners#self-hosted-runner-security-with-public-repositories).
 
-## License Summary
+## License summary
 
 This code is made available under the [MIT license](LICENSE).

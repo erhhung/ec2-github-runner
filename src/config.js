@@ -8,9 +8,10 @@ class Config {
       githubToken: core.getInput('github-token'),
       ec2ImageId: core.getInput('ec2-image-id'),
       ec2InstanceType: core.getInput('ec2-instance-type'),
+      spotInstance: core.getBooleanInput('spot-instance'),
       subnetId: core.getInput('subnet-id'),
       securityGroupId: core.getInput('security-group-id'),
-      label: core.getInput('label'),
+      labels: core.getInput('labels'),
       ec2InstanceId: core.getInput('ec2-instance-id'),
       iamRoleName: core.getInput('iam-role-name'),
       runnerHomeDir: core.getInput('runner-home-dir'),
@@ -48,7 +49,7 @@ class Config {
         throw new Error(`Not all the required inputs are provided for the 'start' mode`);
       }
     } else if (this.input.mode === 'stop') {
-      if (!this.input.label || !this.input.ec2InstanceId) {
+      if (!this.input.labels || !this.input.ec2InstanceId) {
         throw new Error(`Not all the required inputs are provided for the 'stop' mode`);
       }
     } else {
@@ -57,7 +58,7 @@ class Config {
   }
 
   generateUniqueLabel() {
-    return Math.random().toString(36).substr(2, 5);
+    return Math.random().toString(36).substring(2, 7);
   }
 }
 

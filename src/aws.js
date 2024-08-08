@@ -3,43 +3,45 @@ const core = require('@actions/core');
 const config = require('./config');
 
 // User data scripts are run as the root user
-function buildUserDataScript(githubRegistrationToken, label) {
+function buildUserDataScript(labels, githubRegistrationToken) {
   if (config.input.runnerHomeDir) {
     // If runner home directory is specified, we expect the actions-runner software (and dependencies)
     // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
     return [
       '#!/bin/bash',
       `cd "${config.input.runnerHomeDir}"`,
-      `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
+      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript.trim()}\nEOF`,
       'source pre-runner-script.sh',
       'export RUNNER_ALLOW_RUNASROOT=1',
-      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label}`,
+      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${labels} --unattended`,
       './run.sh',
     ];
   } else {
     return [
       '#!/bin/bash',
-      'mkdir actions-runner && cd actions-runner',
-      `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
+      'mkdir -p actions-runner && cd actions-runner',
+      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript.trim()}\nEOF`,
       'source pre-runner-script.sh',
+      // Install the latest version of the Linux runner
+      'REL="https://github.com/actions/runner/releases"',
+      "VER=$(curl -Is ${REL}/latest | sed -En 's/^location:.+\\/tag\\/(.+)\\r$/\\1/p')",
       'case $(uname -m) in aarch64) ARCH="arm64" ;; amd64|x86_64) ARCH="x64" ;; esac && export RUNNER_ARCH=${ARCH}',
-      'curl -O -L https://github.com/actions/runner/releases/download/v2.313.0/actions-runner-linux-${RUNNER_ARCH}-2.313.0.tar.gz',
-      'tar xzf ./actions-runner-linux-${RUNNER_ARCH}-2.313.0.tar.gz',
+      'curl -sL ${REL}/download/${VER}/actions-runner-linux-${RUNNER_ARCH}-${VER#v}.tar.gz | tar -xz',
       'export RUNNER_ALLOW_RUNASROOT=1',
-      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label}`,
+      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${labels} --unattended`,
       './run.sh',
     ];
   }
 }
 
-async function startEc2Instance(label, githubRegistrationToken) {
+async function startEc2Instance(labels, githubRegistrationToken) {
+  const userData = buildUserDataScript(labels, githubRegistrationToken);
+
   const ec2 = new AWS.EC2();
-
-  const userData = buildUserDataScript(githubRegistrationToken, label);
-
   const params = {
     ImageId: config.input.ec2ImageId,
     InstanceType: config.input.ec2InstanceType,
+    InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
     MinCount: 1,
     MaxCount: 1,
     UserData: Buffer.from(userData.join('\n')).toString('base64'),

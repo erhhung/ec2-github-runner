@@ -3,18 +3,22 @@ const gh = require('./gh');
 const config = require('./config');
 const core = require('@actions/core');
 
-function setOutput(label, ec2InstanceId) {
-  core.setOutput('label', label);
+function setOutput(labels, ec2InstanceId) {
+  core.setOutput('labels', labels);
   core.setOutput('ec2-instance-id', ec2InstanceId);
 }
 
 async function start() {
-  const label = config.generateUniqueLabel();
+  let labels = config.input.labels;
+  if (labels) {
+    labels += ',';
+  }
+  labels += config.generateUniqueLabel();
   const githubRegistrationToken = await gh.getRegistrationToken();
-  const ec2InstanceId = await aws.startEc2Instance(label, githubRegistrationToken);
-  setOutput(label, ec2InstanceId);
+  const ec2InstanceId = await aws.startEc2Instance(labels, githubRegistrationToken);
+  setOutput(labels, ec2InstanceId);
   await aws.waitForInstanceRunning(ec2InstanceId);
-  await gh.waitForRunnerRegistered(label);
+  await gh.waitForRunnerRegistered(labels);
 }
 
 async function stop() {
