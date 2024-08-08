@@ -9,6 +9,7 @@ function buildUserDataScript(labels, githubRegistrationToken) {
     // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
     return [
       '#!/bin/bash',
+      'set -euxo pipefail',
       `cd "${config.input.runnerHomeDir}"`,
       `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript}\nEOF`,
       'source pre-runner-script.sh',
@@ -19,6 +20,7 @@ function buildUserDataScript(labels, githubRegistrationToken) {
   } else {
     return [
       '#!/bin/bash',
+      'set -euxo pipefail',
       'mkdir -p actions-runner && cd actions-runner',
       `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript}\nEOF`,
       'source pre-runner-script.sh',
