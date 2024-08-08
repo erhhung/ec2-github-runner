@@ -8,20 +8,23 @@ class Config {
       githubToken: core.getInput('github-token'),
       ec2ImageId: core.getInput('ec2-image-id'),
       ec2InstanceType: core.getInput('ec2-instance-type'),
-      spotInstance: core.getBooleanInput('spot-instance'),
       subnetId: core.getInput('subnet-id'),
       securityGroupId: core.getInput('security-group-id'),
       labels: core.getInput('labels'),
       ec2InstanceId: core.getInput('ec2-instance-id'),
       iamRoleName: core.getInput('iam-role-name'),
+      spotInstance: core.getBooleanInput('spot-instance'),
       runnerHomeDir: core.getInput('runner-home-dir'),
-      preRunnerScript: core.getInput('pre-runner-script'),
+      preRunnerScript: core.getMultilineInput('pre-runner-script'),
     };
 
     const tags = JSON.parse(core.getInput('aws-resource-tags'));
     this.tagSpecifications = null;
     if (tags.length > 0) {
-      this.tagSpecifications = [{ResourceType: 'instance', Tags: tags}, {ResourceType: 'volume', Tags: tags}];
+      this.tagSpecifications = [
+        {ResourceType: 'instance', Tags: tags},
+        {ResourceType: 'volume', Tags: tags},
+      ];
     }
 
     // the values of github.context.repo.owner and github.context.repo.repo are taken from

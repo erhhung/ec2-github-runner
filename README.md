@@ -310,8 +310,8 @@ jobs:
         uses: erhhung/ec2-github-runner@v3
         with:
           mode: stop
-          labels: [ self-hosted,${{ needs.launch-runner.outputs.labels }} ]
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          labels: self-hosted,${{ needs.launch-runner.outputs.labels }}
           ec2-instance-id: ${{ needs.launch-runner.outputs.instance-id }}
 ```
 
