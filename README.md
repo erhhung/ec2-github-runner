@@ -31,7 +31,7 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 - `pre-runner-script` input can span more than one line (improved creation of the `pre-runner-script.sh` file).
 - Added `--unattended` as an extra parameter to the runner's `config.sh` script (see [issue #197](https://github.com/machulav/ec2-github-runner/issues/197)).
 
-**NOTE:** Due to the renaming of an input parameter, the major version (at time fork) has been bumped from the upstream release.
+**NOTE:** Due to the renaming of an input parameter, the major version (at time of fork) has been bumped from the upstream release to **`v3`**.
 
 <br>
 
@@ -167,8 +167,10 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
 
 **2. Prepare GitHub personal access token**
 
-1. Create a new GitHub personal access token with the `repo` scope.
+1. Create a new GitHub personal access token with `repo` scope.
+   If creating a fine-grained access token, be sure to include **Read and write** access for [**Administration**](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens?apiVersion=2022-11-28#repository-permissions-for-administration) repository permissions.
    The action will use the token for self-hosted runners management in the GitHub account on the repository level.
+
 2. Add the token to GitHub secrets.
 
 **3. Prepare EC2 image**
@@ -213,20 +215,19 @@ Now you're ready to go!
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Required                                   | Description                                                                                                                                                                                                                                                                                                                           |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mode`                                                                                                                                                                       | Always required.                           | Specify here which mode you want to use: <br> - `start` - to start a new runner; <br> - `stop` - to stop the previously created runner. |
+| `mode`                                                                                                                                                                       | Always required.                           | Specify here which mode you want to use: <br><br> - `start` - to start a new runner; <br> - `stop` - to stop the previously created runner. |
 | `github-token`                                                                                                                                                               | Always required.                           | GitHub Personal Access Token with the `repo` scope assigned. |
-| `ec2-image-id`                                                                                                                                                               | Required if you use the `start` mode.      | EC2 Image ID (AMI). <br><br> The new runner will be launched from this image. <br><br> The action is compatible with Amazon Linux 2 images. |
+| `ec2-image-id`                                                                                                                                                               | Required if you use the `start` mode.      | EC2 Image ID (AMI). <br><br> The new runner will be launched from this image. <br><br> This action is compatible with Amazon Linux 2023 images. |
 | `ec2-instance-type`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Instance Type. |
 | `subnet-id`                                                                                                                                                                  | Required if you use the `start` mode.      | VPC Subnet ID. <br><br> The subnet should belong to the same VPC as the specified security group. |
-| `security-group-id`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Security Group ID. <br><br> The security group should belong to the same VPC as the specified subnet. <br><br> Only the outbound traffic for port 443 should be allowed. No inbound traffic is required. |
+| `security-group-id`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Security Group ID. <br><br> The security group should belong to the same VPC as the specified subnet. <br><br> Only outbound traffic for port 443 should be allowed. No inbound traffic is required. |
 | `labels`                                                                                                                                                                     | Required if you use the `stop` mode.       | Name(s) (in CSV form) of unique labels to assign to the runner. <br><br> These labels will be appended to by the output of the action in the `start` mode to include a unique ID. <br><br> Use these labels to remove the runner from GitHub when the runner is no longer needed. |
-| `ec2-instance-id`                                                                                                                                                            | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> The ID is provided by the output of the action in the `start` mode. <br><br> The ID is used to terminate the EC2 instance when the runner is not needed anymore. |
+| `ec2-instance-id`                                                                                                                                                            | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> This ID is provided by the output of the action in `start` mode. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed. |
 | `iam-role-name`                                                                                                                                                              | Optional. Used only with the `start` mode. | IAM role name to attach to the created EC2 runner. <br><br> This allows the runner to have permissions to run additional actions within the AWS account, without having to manage additional GitHub secrets and AWS users. <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
-| `spot-instance`                                                                                                                                                              | Optional. Used only with the `start` mode. | `true` to launch the instance in Spot mode with default options. |
+| `spot-instance`                                                                                                                                                              | Optional. Used only with the `start` mode. | Whether to launch the runner as a Spot instance. <br><br> If set to `true`, the runner will be launched as a Spot instance with default options. |
 | `aws-resource-tags`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies tags to add to the EC2 instance and any attached storage. <br><br> This field is a stringified JSON array of tag objects, each containing a `Key` and `Value` field (see example below). <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
-| `runner-home-dir`                                                                                                                                                            | Optional. Used only with the `start` mode. | Specifies a directory where pre-installed actions-runner software and scripts are located.<br><br> |
-| `pre-runner-script`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies bash commands to run before the runner starts.  It's useful for installing dependencies with apt-get, yum, dnf, etc. For example:<pre>          - name: Start EC2 runner<br>            with:<br>              mode: start<br>              ...<br>              pre-runner-script: \|<br>                 sudo yum update -y && \ <br>                 sudo yum install docker git libicu -y<br>                 sudo systemctl enable docker</pre>
-<br><br> |
+| `runner-home-dir`                                                                                                                                                            | Optional. Used only with the `start` mode. | Specifies a directory where pre-installed actions-runner software and scripts are located. <br><br> |
+| `pre-runner-script`                                                                                                                                                          | Optional. Used only with the `start` mode. | Specifies Bash commands to run as the root user before the runner starts. It's useful for installing dependencies with `apt-get`, `yum`, `dnf`, etc. For example: <pre>          - name: Start EC2 runner<br>            with:<br>              mode: start<br>              ...<br>              pre-runner-script: \|<br>                dnf update && \ <br>                dnf install -y git docker libicu && \ <br>                systemctl enable docker</pre> <br><br> |
 
 ### Environment variables
 
@@ -242,8 +243,8 @@ We recommend using the [aws-actions/configure-aws-credentials](https://github.co
 
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description                                                                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `labels`                                                                                                                                                                     | Name(s) (in CSV form) of input labels, if any, plus a unique label assigned to the runner. <br><br> These labels are used in two cases: <br> - to use in the `runs-on` list property of subsequent jobs; <br> - to remove the runner from GitHub when it is no longer needed. |
-| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> The ID is used to terminate the EC2 instance when the runner is not needed anymore. |
+| `labels`                                                                                                                                                                     | Name(s) (in CSV form) of input labels, if any, plus a unique label assigned to the runner. <br><br> These labels are used in two cases: <br> - to use as the `runs-on` property value of subsequent jobs; <br> - to remove the runner from GitHub when it is no longer needed. |
+| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> This ID is used to terminate the EC2 instance when the runner is not needed anymore. |
 
 ### Example
 
@@ -253,19 +254,16 @@ The workflow showed in the picture above and declared in `do-the-job.yml` looks 
 name: do-the-job
 on: pull_request
 jobs:
-  start-runner:
-    name: Start self-hosted EC2 runner
+  launch-runner:
+    name: Launch self-hosted EC2 runner
     runs-on: ubuntu-latest
-    outputs:
-      labels: ${{ steps.start-ec2-runner.outputs.labels }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
       - name: Start EC2 runner
         id: start-ec2-runner
         uses: erhhung/ec2-github-runner@v3
@@ -279,20 +277,25 @@ jobs:
           iam-role-name: my-role-name # optional, requires additional permissions
           aws-resource-tags: > # optional, requires additional permissions
             [
-              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "Name", "Value": "github-runner-${{ github.run_id }}-${{ github.run_attempt }}"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
             ]
+    outputs:
+      labels: ${{ steps.start-ec2-runner.outputs.labels }}
+      instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
   do-the-job:
     name: Do the job on the runner
-    needs: start-runner # required to start the main job when the runner is ready
-    runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
+    needs: launch-runner # required to start the main job when the runner is ready
+    runs-on: [ self-hosted,${{ needs.launch-runner.outputs.labels }} ] # run the job on the newly created runner
     steps:
       - name: Hello World
         run: echo 'Hello World!'
-  stop-runner:
-    name: Stop self-hosted EC2 runner
+
+  terminate-runner:
+    name: Terminate self-hosted EC2 runner
     needs:
-      - start-runner # required to get output from the start-runner job
+      - launch-runner # required to get output from the launch-runner job
       - do-the-job # required to wait when the main job is done
     runs-on: ubuntu-latest
     if: ${{ always() }} # required to stop the runner even if errors occurred in previous jobs
@@ -300,16 +303,16 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
       - name: Stop EC2 runner
         uses: erhhung/ec2-github-runner@v3
         with:
           mode: stop
-          labels: ${{ needs.start-runner.outputs.labels }}
+          labels: [ self-hosted,${{ needs.launch-runner.outputs.labels }} ]
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
+          ec2-instance-id: ${{ needs.launch-runner.outputs.instance-id }}
 ```
 
 ### Real user examples
