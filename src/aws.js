@@ -10,7 +10,7 @@ function buildUserDataScript(labels, githubRegistrationToken) {
     return [
       '#!/bin/bash',
       `cd "${config.input.runnerHomeDir}"`,
-      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript.trim()}\nEOF`,
+      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript}\nEOF`,
       'source pre-runner-script.sh',
       'export RUNNER_ALLOW_RUNASROOT=1',
       `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${labels} --unattended`,
@@ -20,7 +20,7 @@ function buildUserDataScript(labels, githubRegistrationToken) {
     return [
       '#!/bin/bash',
       'mkdir -p actions-runner && cd actions-runner',
-      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript.trim()}\nEOF`,
+      `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript}\nEOF`,
       'source pre-runner-script.sh',
       // Install the latest version of the Linux runner
       'REL="https://github.com/actions/runner/releases"',
