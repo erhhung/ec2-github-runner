@@ -265,8 +265,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Start EC2 runner
-        id: start-ec2-runner
+        id: start-runner
         uses: erhhung/ec2-github-runner@v3
+        env:
+          RUN_INFO: ${{ github.run_id }}-${{ github.run_attempt }}
         with:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
@@ -277,17 +279,32 @@ jobs:
           iam-role-name: my-role-name # optional, requires additional permissions
           aws-resource-tags: > # optional, requires additional permissions
             [
-              {"Key": "Name", "Value": "github-runner-${{ github.run_id }}-${{ github.run_attempt }}"},
-              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+              {"Key": "Name", "Value": "github-runner-${{ env.RUN_INFO }}"},
+              {"Key": "GitHubRepo", "Value": "${{ github.repository }}"}
             ]
+          pre-runner-script: |
+            hostname="runner-$(date '+%y%m%d%H%M')-${{ env.RUN_INFO }}" && \
+            hostnamectl set-hostname $hostname
+            dnf update && \
+            dnf install -y git docker libicu && \
+            systemctl start docker
+      - name: Prepare job output
+        id: prepare-output
+        run: |
+          csv="self-hosted,${{ steps.start-runner.outputs.labels }}"
+          cat <<EOF >> $GITHUB_OUTPUT
+          labels-csv=$csv
+          labels-json=["${csv//,/\",\"}"]
+          EOF
     outputs:
-      labels: ${{ steps.start-ec2-runner.outputs.labels }}
-      instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+      labels-csv:  '${{ steps.prepare-output.outputs.labels-csv }}'
+      labels-json: '${{ steps.prepare-output.outputs.labels-json }}'
+      instance-id:  ${{ steps.start-runner.outputs.ec2-instance-id }}
 
   do-the-job:
     name: Do the job on the runner
     needs: launch-runner # required to start the main job when the runner is ready
-    runs-on: [ self-hosted,${{ needs.launch-runner.outputs.labels }} ] # run the job on the newly created runner
+    runs-on: ${{ fromJSON( needs.launch-runner.outputs.labels-json ) }} # run the job on the newly created runner
     steps:
       - name: Hello World
         run: echo 'Hello World!'
@@ -311,7 +328,7 @@ jobs:
         with:
           mode: stop
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          labels: self-hosted,${{ needs.launch-runner.outputs.labels }}
+          labels: ${{ needs.launch-runner.outputs.labels-csv }}
           ec2-instance-id: ${{ needs.launch-runner.outputs.instance-id }}
 ```
 
