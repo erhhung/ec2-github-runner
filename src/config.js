@@ -19,17 +19,21 @@ class Config {
     };
 
     const tags = JSON.parse(core.getInput('aws-resource-tags'));
-    this.tagSpecifications = null;
-    if (tags.length > 0) {
-      this.tagSpecifications = [
-        {ResourceType: 'instance', Tags: tags},
-        {ResourceType: 'volume', Tags: tags},
-      ];
+    if (!Array.isArray(tags)) {
+      throw new Error(`The 'aws-resource-tags' input is not an array`);
     }
 
-    // the values of github.context.repo.owner and github.context.repo.repo are taken from
-    // the environment variable GITHUB_REPOSITORY specified in "owner/repo" format and
-    // provided by the GitHub Action on the runtime
+    // regardless if any tags were provided as input, a Labels tag will
+    // always be added that includes any labels provided as input, plus
+    // the unique, generated label
+    this.tagSpecifications = [
+      { ResourceType: 'instance', Tags: tags },
+      { ResourceType: 'volume', Tags: tags },
+    ];
+
+    // the values of github.context.repo.owner and github.context.repo.repo
+    // are taken from environment variable GITHUB_REPOSITORY in "owner/repo"
+    // format as provided by GitHub Actions at runtime
     this.githubContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -38,7 +42,6 @@ class Config {
     //
     // validate input
     //
-
     if (!this.input.mode) {
       throw new Error(`The 'mode' input is not specified`);
     }

@@ -1,6 +1,8 @@
-const AWS = require('aws-sdk');
 const core = require('@actions/core');
 const config = require('./config');
+
+const { EC2Client, RunInstancesCommand, TerminateInstancesCommand, waitUntilInstanceRunning } = require('@aws-sdk/client-ec2');
+const client = new EC2Client();
 
 // User data scripts are run as the root user
 function buildUserDataScript(labels, githubRegistrationToken) {
@@ -14,7 +16,7 @@ function buildUserDataScript(labels, githubRegistrationToken) {
       `cat <<'EOF' > pre-runner-script.sh\n${config.input.preRunnerScript}\nEOF`,
       'source pre-runner-script.sh',
       'export RUNNER_ALLOW_RUNASROOT=1',
-      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${labels} --unattended`,
+      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels "${labels}" --unattended`,
       './run.sh',
     ];
   } else {
@@ -30,17 +32,23 @@ function buildUserDataScript(labels, githubRegistrationToken) {
       'case $(uname -m) in aarch64) ARCH="arm64" ;; amd64|x86_64) ARCH="x64" ;; esac && export RUNNER_ARCH=${ARCH}',
       'curl -sL ${REL}/download/${VER}/actions-runner-linux-${RUNNER_ARCH}-${VER#v}.tar.gz | tar -xz',
       'export RUNNER_ALLOW_RUNASROOT=1',
-      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${labels} --unattended`,
+      `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels "${labels}" --unattended`,
       './run.sh',
     ];
   }
 }
 
 async function startEc2Instance(labels, githubRegistrationToken) {
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/ec2/command/RunInstancesCommand
   const userData = buildUserDataScript(labels, githubRegistrationToken);
 
-  const ec2 = new AWS.EC2();
-  const params = {
+  // add the "Labels" tag to the tag list
+  config.tagSpecifications[0].Tags.push({
+    Key: 'Labels',
+    Value: labels.replace(/(?<=,)(?=\S)/g, ' '),
+  });
+
+  const input = {
     ImageId: config.input.ec2ImageId,
     InstanceType: config.input.ec2InstanceType,
     InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
@@ -54,8 +62,9 @@ async function startEc2Instance(labels, githubRegistrationToken) {
   };
 
   try {
-    const result = await ec2.runInstances(params).promise();
-    const ec2InstanceId = result.Instances[0].InstanceId;
+    const command = new RunInstancesCommand(input);
+    const response = await client.send(command);
+    const ec2InstanceId = response.Instances[0].InstanceId;
     core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
     return ec2InstanceId;
   } catch (error) {
@@ -65,14 +74,14 @@ async function startEc2Instance(labels, githubRegistrationToken) {
 }
 
 async function terminateEc2Instance() {
-  const ec2 = new AWS.EC2();
-
-  const params = {
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/ec2/command/TerminateInstancesCommand
+  const input = {
     InstanceIds: [config.input.ec2InstanceId],
   };
 
   try {
-    await ec2.terminateInstances(params).promise();
+    const command = new TerminateInstancesCommand(input);
+    await client.send(command);
     core.info(`AWS EC2 instance ${config.input.ec2InstanceId} is terminated`);
     return;
   } catch (error) {
@@ -82,14 +91,17 @@ async function terminateEc2Instance() {
 }
 
 async function waitForInstanceRunning(ec2InstanceId) {
-  const ec2 = new AWS.EC2();
-
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-client-ec2/Variable/waitUntilInstanceRunning
   const params = {
+    client: client,
+    maxWaitTime: 60 * 5,
+  };
+  const input = {
     InstanceIds: [ec2InstanceId],
   };
 
   try {
-    await ec2.waitFor('instanceRunning', params).promise();
+    await waitUntilInstanceRunning(params, input);
     core.info(`AWS EC2 instance ${ec2InstanceId} is up and running`);
     return;
   } catch (error) {

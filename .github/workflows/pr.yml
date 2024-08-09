@@ -1,4 +1,4 @@
-name: PR automations
+name: PR Automations
 on:
   pull_request:
     branches:

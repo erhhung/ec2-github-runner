@@ -67,8 +67,8 @@ inputs:
   aws-resource-tags:
     description: >-
       Tags to attach to the launched EC2 instance and volume.
-      This must be a stringified array of AWS Tag objects, with both Key and Value fields,
-      for example: '[{"Key": "TagKey1", "Value": "TagValue1"}, {"Key": "TagKey2", "Value": "TagValue2"}]'
+      This must be a stringified array of AWS Tag objects, with both Key and Value fields.
+      For example: '[{"Key": "TagKey1", "Value": "TagValue1"}, {"Key": "TagKey2", "Value": "TagValue2"}]'
     required: false
     default: '[]'
   runner-home-dir:
@@ -79,6 +79,8 @@ inputs:
     description: >-
       Specifies Bash commands to run as the root user before the runner starts.
       It's useful for installing dependencies with apt-get, yum, dnf, etc.
+      Please be aware that the commands will be sourced by Bash with '-e -u -x -o pipefail'
+      options set, so suppress harmless errors using 'false || true' construct if necessary.
     required: false
 
 outputs:
