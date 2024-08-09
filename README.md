@@ -25,17 +25,17 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 - Migrated use of **AWS SDK for JavaScript** from v2 to v3 to suppress deprecation warnings.
 
-- Added option to launch the EC2 instance as a **Spot instance** (see input `spot-instance`).
+- Added option to launch the EC2 instance as a **Spot instance** (see `spot-instance` input).
 
-- Renamed `label` input to **`labels`** that accepts one or more labels (in CSV form) to the runner's `config.sh` script. <br>
+- Renamed `label` input to **`labels`** to accept one or more labels (as CSV) to pass to the runner's `config.sh` script. <br>
   The `label` output is similarly renamed to **`labels`** and is the set of input labels, if any, plus a randomly generated ID.
 
 - Regardless if any resource tags were provided as input, a **Labels tag** will always be added that includes any labels provided as input, plus the unique, generated label.
 
-- EC2 instance user data script always installs the **latest version** of the [GitHub Actions Runner](https://github.com/actions/runner/releases/latest) _(this may or may not cause an issue)._
+- EC2 instance user data script will always install the **latest version** of the [GitHub Actions Runner](https://github.com/actions/runner/releases/latest) _(this may or may not cause an issue)._
 
-- `pre-runner-script` input can span more than one line (improved creation of the `pre-runner-script.sh` file), <br>
-  and that script will get sourced by Bash with `-e -u -x -o pipefail` options.
+- `pre-runner-script` input can span more than one line (improved the creation of the `pre-runner-script.sh` file), <br>
+  and that script will get `source`d in a Bash shell with `-e -u -x -o pipefail` options.
 
 - Added `--unattended` as an extra parameter to the runner's `config.sh` script (see [issue #197](https://github.com/machulav/ec2-github-runner/issues/197)).
 
@@ -63,7 +63,7 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 ### Access private resources in your VPC
 
-The action can start the EC2 runner in any subnet of your VPC that you need - public or private.
+The action can start the EC2 instance in any subnet of your VPC that you need, public or private.
 In this way, you can easily access any private resources in your VPC from your GitHub Actions workflow.
 
 For example, you can access your database in the private subnet to run the database migration.
@@ -76,7 +76,7 @@ Some of your CI workloads may require more powerful hardware than GitHub-hosted 
 
 In the action, you can configure any EC2 instance type for your runner that AWS provides, such as one with ARM-based Graviton CPUs.
 
-For example, you may run a `c5.4xlarge` EC2 runner for some of your compute-intensive workloads, or a `r5.xlarge` EC2 runner for workloads that process large data sets in memory.
+For example, you can run a `c5.4xlarge` EC2 runner for some of your compute-intensive workloads, or a `r5.xlarge` EC2 runner for workloads that process large data sets in memory.
 
 ### Run jobs longer than 6 hours
 
