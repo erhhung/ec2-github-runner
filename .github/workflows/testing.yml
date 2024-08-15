@@ -1,4 +1,4 @@
-name: Test
+name: Testing
 
 on:
   workflow_dispatch:
@@ -74,8 +74,10 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.token }}
-          issue-title: Testing ${{ needs.launch-runner.outputs.runner-name }}
-          issue-body: Please approve the termination of this test runner.
+          issue-title: ${{ github.workflow }}
+          issue-body: >-
+            Please approve the termination of test runner:
+            ${{ needs.launch-runner.outputs.runner-name }}
           approvers: ${{ github.triggering_actor }},${{ github.repository_owner }}
           additional-approved-words: OK
           minimum-approvals: 1
