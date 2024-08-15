@@ -64,6 +64,16 @@ inputs:
       If set to 'true', the runner will be launched as a Spot instance with default options.
     required: false
     default: 'false'
+  root-volume-type:
+    description: >-
+      Root volume type. The default value is 'gp3'.
+    required: false
+    default: 'gp3'
+  root-volume-size:
+    description: >-
+      Root volume size in GiB. The default value is '10'.
+    required: false
+    default: '10'
   aws-resource-tags:
     description: >-
       Tags to attach to the launched EC2 instance and volume.

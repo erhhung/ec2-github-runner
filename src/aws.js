@@ -49,15 +49,24 @@ async function startEc2Instance(labels, githubRegistrationToken) {
   });
 
   const input = {
+    MinCount: 1,
+    MaxCount: 1,
     ImageId: config.input.ec2ImageId,
     InstanceType: config.input.ec2InstanceType,
     InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
-    MinCount: 1,
-    MaxCount: 1,
-    UserData: Buffer.from(userData.join('\n')).toString('base64'),
+    BlockDeviceMappings: [
+      {
+        Ebs: {
+          VolumeType: config.input.rootVolumeType,
+          VolumeSize: Number(config.input.rootVolumeSize),
+          Encrypted: true,
+        },
+      },
+    ],
     SubnetId: config.input.subnetId,
     SecurityGroupIds: [config.input.securityGroupId],
     IamInstanceProfile: { Name: config.input.iamRoleName },
+    UserData: Buffer.from(userData.join('\n')).toString('base64'),
     TagSpecifications: config.tagSpecifications,
   };
 
