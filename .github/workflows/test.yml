@@ -7,6 +7,11 @@ jobs:
   launch-runner:
     runs-on: ubuntu-latest
     steps:
+      # https://github.com/actions/checkout
+      - name: Check out Source Code
+        id: checkout
+        uses: actions/checkout@v4
+
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS Credentials
         id: aws
@@ -19,7 +24,7 @@ jobs:
       # https://github.com/erhhung/ec2-github-runner
       - name: Launch Test EC2 Runner
         id: runner
-        uses: ${{ github.repository }}
+        uses: .
         env:
           RUN_INFO: ${{ github.run_id }}-${{ github.run_attempt }}
         with:
@@ -82,6 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
+      # https://github.com/actions/checkout
+      - name: Check out Source Code
+        id: checkout
+        uses: actions/checkout@v4
+
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS Credentials
         id: aws
@@ -94,7 +104,7 @@ jobs:
       # https://github.com/erhhung/ec2-github-runner
       - name: Terminate Test EC2 Runner
         id: runner
-        uses: ${{ github.repository }}
+        uses: .
         with:
           mode: stop
           github-token: ${{ secrets.RUNNER_GITHUB_REPOS_PAT }}
