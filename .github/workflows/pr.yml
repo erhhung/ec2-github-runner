@@ -1,21 +1,29 @@
 name: PR Automations
+
 on:
   pull_request:
     branches:
       - main
+
 jobs:
   lint-code:
     name: Lint code
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      # https://github.com/actions/checkout
+      - name: Checkout Source Code
+        id: checkout
+        uses: actions/checkout@v4
+
+      # https://github.com/actions/cache
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: ec2-github-runner-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install packages
         run: npm install
+
       - name: Run linter
         run: npm run lint

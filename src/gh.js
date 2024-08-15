@@ -9,7 +9,7 @@ async function getRunner(labels) {
 
   try {
     let runners = await octokit.paginate('GET /repos/{owner}/{repo}/actions/runners', config.githubContext);
-    for (const label of labels.split(',').map(s => s.trim())) {
+    for (const label of labels.split(',').map((s) => s.trim())) {
       runners = _.filter(runners, { labels: [{ name: label }] });
     }
     return runners.length > 0 ? runners[0] : null;
@@ -32,26 +32,7 @@ async function getRegistrationToken() {
   }
 }
 
-async function removeRunner() {
-  const octokit = github.getOctokit(config.input.githubToken);
-
-  // skip the removal process if the runner is not found
-  const runner = await getRunner(config.input.labels);
-  if (!runner) {
-    core.info(`GitHub self-hosted runner with labels ${config.input.labels} is not found, so the removal is skipped`);
-    return;
-  }
-
-  try {
-    await octokit.request('DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}', _.merge(config.githubContext, { runner_id: runner.id }));
-    core.info(`GitHub self-hosted runner ${runner.name} is removed`);
-    return;
-  } catch (error) {
-    core.error('GitHub self-hosted runner removal error');
-    throw error;
-  }
-}
-
+// returns the name of the registered runner
 async function waitForRunnerRegistered(label) {
   const timeoutMinutes = 5;
   const retryIntervalSeconds = 10;
@@ -59,7 +40,7 @@ async function waitForRunnerRegistered(label) {
   let waitSeconds = 0;
 
   core.info(`Waiting ${quietPeriodSeconds}s for the AWS EC2 instance to be registered in GitHub as a new self-hosted runner`);
-  await new Promise(r => setTimeout(r, quietPeriodSeconds * 1000));
+  await new Promise((r) => setTimeout(r, quietPeriodSeconds * 1000));
   core.info(`Checking every ${retryIntervalSeconds}s if the GitHub self-hosted runner is registered`);
 
   return new Promise((resolve, reject) => {
@@ -69,13 +50,15 @@ async function waitForRunnerRegistered(label) {
       if (waitSeconds > timeoutMinutes * 60) {
         core.error('GitHub self-hosted runner registration error');
         clearInterval(interval);
-        reject(`A timeout of ${timeoutMinutes} minutes is exceeded. Your AWS EC2 instance was not able to register itself in GitHub as a new self-hosted runner.`);
+        reject(
+          `A timeout of ${timeoutMinutes} minutes has exceeded. Your AWS EC2 instance was not able to register itself in GitHub as a new self-hosted runner.`
+        );
       }
 
       if (runner && runner.status === 'online') {
-        core.info(`GitHub self-hosted runner ${runner.name} is registered and ready to use`);
+        core.info(`GitHub self-hosted runner ${runner.name} is registered and ready for use`);
         clearInterval(interval);
-        resolve();
+        resolve(runner.name);
       } else {
         waitSeconds += retryIntervalSeconds;
         core.info('Checking...');
@@ -84,8 +67,28 @@ async function waitForRunnerRegistered(label) {
   });
 }
 
+async function removeRunner() {
+  const octokit = github.getOctokit(config.input.githubToken);
+
+  // skip the removal process if the runner is not found
+  const runner = await getRunner(config.input.labels);
+  if (!runner) {
+    core.info(`GitHub self-hosted runner with labels "${config.input.labels}" not found, so removal has been skipped`);
+    return;
+  }
+
+  try {
+    await octokit.request('DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}', _.merge(config.githubContext, { runner_id: runner.id }));
+    core.info(`GitHub self-hosted runner ${runner.name} has been removed`);
+    return;
+  } catch (error) {
+    core.error('GitHub self-hosted runner removal error');
+    throw error;
+  }
+}
+
 module.exports = {
   getRegistrationToken,
-  removeRunner,
   waitForRunnerRegistered,
+  removeRunner,
 };

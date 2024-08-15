@@ -1,6 +1,6 @@
 name: On-demand self-hosted AWS EC2 runner for GitHub Actions
 description: GitHub Action for automatic launching and registration of AWS EC2 instance as GitHub Actions self-hosted runner.
-author: Volodymyr Machula
+author: Volodymyr Machula / Erhhung Yuan
 branding:
   icon: box
   color: orange
@@ -110,6 +110,10 @@ outputs:
     description: >-
       EC2 Instance ID of the created runner.
       This ID is used to terminate the EC2 instance when the runner is no longer needed.
+  runner-name:
+    description: >-
+      Name of the created runner.
+      This is the EC2 instance hostname, which may be customized by the 'pre-runner-script'.
 
 runs:
   using: node20

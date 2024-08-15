@@ -33,6 +33,8 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 - Added `--unattended` as an extra parameter to the runner's `config.sh` script (see [issue #197](https://github.com/machulav/ec2-github-runner/issues/197)).
 
+- Added `runner-name` output. It is the EC2 instance hostname, which may be customized by the `pre-runner-script`.
+
 **NOTE:** Due to the renaming of an input parameter, the major version (at time of fork) has been bumped from the upstream release to **`v3`**.
 
 <br>
@@ -251,7 +253,8 @@ We recommend using the [aws-actions/configure-aws-credentials](https://github.co
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `labels`                                                                                                                                                                     | Name(s) (in CSV form) of input labels, if any, plus a unique label assigned to the runner. <br><br> These labels are used in two cases: <br> - to use as the `runs-on` property value of subsequent jobs; <br> - to remove the runner from GitHub when it is no longer needed. |
-| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> This ID is used to terminate the EC2 instance when the runner is not needed anymore.                                                                                                                                           |
+| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                                             |
+| `runner-name`                                                                                                                                                                | Name of the created runner. <br><br> This is the EC2 instance hostname, which may be customized by the `pre-runner-script`.                                                                                                                                                    |
 
 ### Example
 
@@ -313,6 +316,7 @@ jobs:
       labels-csv:  '${{ steps.prepare-output.outputs.labels-csv }}'
       labels-json: '${{ steps.prepare-output.outputs.labels-json }}'
       instance-id:  ${{ steps.start-runner.outputs.ec2-instance-id }}
+      runner-name:  ${{ steps.start-runner.outputs.runner-name }}
 
   do-the-job:
     name: Do the job on the runner

@@ -1,0 +1,102 @@
+name: Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  launch-runner:
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/aws-actions/configure-aws-credentials
+      - name: Configure AWS Credentials
+        id: aws
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.RUNNER_AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # https://github.com/erhhung/ec2-github-runner
+      - name: Launch Test EC2 Runner
+        id: runner
+        uses: ${{ github.repository }}
+        env:
+          RUN_INFO: ${{ github.run_id }}-${{ github.run_attempt }}
+        with:
+          mode: start
+          github-token: ${{ secrets.RUNNER_GITHUB_REPOS_PAT }}
+          labels: Linux,ARM64,AL2023
+          ec2-image-id: ${{ vars.RUNNER_ARM64_AMI_ID }}
+          # runner could lose connection to GitHub Actions
+          # if using instance type smaller than t4g.xlarge
+          ec2-instance-type: ${{ vars.RUNNER_ARM64_INSTANCE_TYPE }}
+          spot-instance: 'true'
+          root-volume-size: '${{ vars.RUNNER_ROOT_VOLUME_SIZE }}'
+          subnet-id: ${{ vars.RUNNER_SUBNET_ID }}
+          security-group-id: ${{ vars.RUNNER_SECURITY_GROUP_ID }}
+          iam-role-name: ${{ vars.RUNNER_INSTANCE_ROLE_NAME }}
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "github-runner-${{ env.RUN_INFO }}"},
+              {"Key": "GitHubRepo", "Value": "${{ github.repository }}"}
+            ]
+          pre-runner-script: |
+            hostname="runner-$(date '+%y%m%d%H%M')-${{ env.RUN_INFO }}" && \
+            hostnamectl set-hostname $hostname  # host name == runner name
+            # libicu is required by GHA Dotnet Core
+            dnf update && dnf install -y git libicu
+
+      - name: Prepare Job Output Values
+        id: output
+        run: |
+          csv="self-hosted,${{ steps.runner.outputs.labels }}"
+          cat <<EOF >> $GITHUB_OUTPUT
+          labels-csv=$csv
+          labels-json=["${csv//,/\",\"}"]
+          EOF
+    outputs:
+      labels-csv: '${{ steps.output.outputs.labels-csv }}'
+      labels-json: '${{ steps.output.outputs.labels-json }}'
+      instance-id: ${{ steps.runner.outputs.ec2-instance-id }}
+      runner-name: ${{ steps.start-runner.outputs.runner-name }}
+
+  manual-approval:
+    runs-on: ubuntu-latest
+    needs: launch-runner
+    steps:
+      # https://github.com/trstringer/manual-approval
+      - name: Wait for Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          issue-title: Testing ${{ needs.launch-runner.outputs.runner-name }}
+          issue-body: Please approve the termination of this test runner.
+          approvers: ${{ github.triggering_actor }},${{ github.repository_owner }}
+          additional-approved-words: OK
+          minimum-approvals: 1
+
+  terminate-runner:
+    needs:
+      - launch-runner
+      - manual-approval
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      # https://github.com/aws-actions/configure-aws-credentials
+      - name: Configure AWS Credentials
+        id: aws
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.RUNNER_AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # https://github.com/erhhung/ec2-github-runner
+      - name: Terminate Test EC2 Runner
+        id: runner
+        uses: ${{ github.repository }}
+        with:
+          mode: stop
+          github-token: ${{ secrets.RUNNER_GITHUB_REPOS_PAT }}
+          labels: ${{ needs.launch-runner.outputs.labels-csv }}
+          ec2-instance-id: ${{ needs.launch-runner.outputs.instance-id }}

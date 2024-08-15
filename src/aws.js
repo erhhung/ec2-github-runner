@@ -1,7 +1,7 @@
 const core = require('@actions/core');
 const config = require('./config');
 
-const { EC2Client, RunInstancesCommand, TerminateInstancesCommand, waitUntilInstanceRunning } = require('@aws-sdk/client-ec2');
+const { EC2Client, RunInstancesCommand, waitUntilInstanceRunning, TerminateInstancesCommand } = require('@aws-sdk/client-ec2');
 const client = new EC2Client();
 
 // User data scripts are run as the root user
@@ -86,23 +86,6 @@ async function startEc2Instance(labels, githubRegistrationToken) {
   }
 }
 
-async function terminateEc2Instance() {
-  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/ec2/command/TerminateInstancesCommand
-  const input = {
-    InstanceIds: [config.input.ec2InstanceId],
-  };
-
-  try {
-    const command = new TerminateInstancesCommand(input);
-    await client.send(command);
-    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} has terminated`);
-    return;
-  } catch (error) {
-    core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
-    throw error;
-  }
-}
-
 async function waitForInstanceRunning(ec2InstanceId) {
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-client-ec2/Variable/waitUntilInstanceRunning
   const params = {
@@ -123,8 +106,25 @@ async function waitForInstanceRunning(ec2InstanceId) {
   }
 }
 
+async function terminateEc2Instance() {
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/ec2/command/TerminateInstancesCommand
+  const input = {
+    InstanceIds: [config.input.ec2InstanceId],
+  };
+
+  try {
+    const command = new TerminateInstancesCommand(input);
+    await client.send(command);
+    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} has terminated`);
+    return;
+  } catch (error) {
+    core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
+    throw error;
+  }
+}
+
 module.exports = {
   startEc2Instance,
-  terminateEc2Instance,
   waitForInstanceRunning,
+  terminateEc2Instance,
 };

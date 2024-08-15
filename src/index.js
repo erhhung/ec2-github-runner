@@ -3,9 +3,10 @@ const config = require('./config');
 const aws = require('./aws');
 const gh = require('./gh');
 
-function setOutput(labels, instanceId) {
+function setOutput(labels, instanceId, runnerName) {
   core.setOutput('labels', labels);
   core.setOutput('ec2-instance-id', instanceId);
+  core.setOutput('runner-name', runnerName);
 }
 
 async function start() {
@@ -18,10 +19,9 @@ async function start() {
 
   const regToken = await gh.getRegistrationToken();
   const instanceId = await aws.startEc2Instance(labels, regToken);
-  setOutput(labels, instanceId);
-
   await aws.waitForInstanceRunning(instanceId);
-  await gh.waitForRunnerRegistered(unique);
+  const runnerName = await gh.waitForRunnerRegistered(unique);
+  setOutput(labels, instanceId, runnerName);
 }
 
 async function stop() {
