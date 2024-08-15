@@ -64,16 +64,22 @@ inputs:
       If set to 'true', the runner will be launched as a Spot instance with default options.
     required: false
     default: 'false'
+  root-volume-device:
+    description: >-
+      Root volume device name. The default value is '/dev/xvda', but depends on the AMI used.
+      See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html#available-ec2-device-names.
+    required: false
+    default: /dev/xvda
   root-volume-type:
     description: >-
       Root volume type. The default value is 'gp3'.
     required: false
-    default: 'gp3'
+    default: gp3
   root-volume-size:
     description: >-
-      Root volume size in GiB. The default value is '10'.
+      Root volume size in GiB. The default value is '8'.
     required: false
-    default: '10'
+    default: '8'
   aws-resource-tags:
     description: >-
       Tags to attach to the launched EC2 instance and volume.

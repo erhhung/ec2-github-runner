@@ -14,6 +14,7 @@ class Config {
       ec2InstanceId: core.getInput('ec2-instance-id'),
       iamRoleName: core.getInput('iam-role-name'),
       spotInstance: core.getBooleanInput('spot-instance'),
+      rootVolumeDevice: core.getInput('root-volume-device'),
       rootVolumeType: core.getInput('root-volume-type'),
       rootVolumeSize: core.getInput('root-volume-size'),
       runnerHomeDir: core.getInput('runner-home-dir'),

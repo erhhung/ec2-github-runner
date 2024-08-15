@@ -56,6 +56,7 @@ async function startEc2Instance(labels, githubRegistrationToken) {
     InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
     BlockDeviceMappings: [
       {
+        DeviceName: config.input.rootVolumeDevice,
         Ebs: {
           VolumeType: config.input.rootVolumeType,
           VolumeSize: Number(config.input.rootVolumeSize),
