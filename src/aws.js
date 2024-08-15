@@ -54,6 +54,7 @@ async function startEc2Instance(labels, githubRegistrationToken) {
     ImageId: config.input.ec2ImageId,
     InstanceType: config.input.ec2InstanceType,
     InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
+    EbsOptimized: true,
     BlockDeviceMappings: [
       {
         DeviceName: config.input.rootVolumeDevice,
@@ -70,15 +71,17 @@ async function startEc2Instance(labels, githubRegistrationToken) {
     UserData: Buffer.from(userData.join('\n')).toString('base64'),
     TagSpecifications: config.tagSpecifications,
   };
+  core.info('Calling RunInstances with input:');
+  core.info(JSON.stringify(input, null, 2));
 
   try {
     const command = new RunInstancesCommand(input);
     const response = await client.send(command);
     const ec2InstanceId = response.Instances[0].InstanceId;
-    core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
+    core.info(`AWS EC2 instance ${ec2InstanceId} has started`);
     return ec2InstanceId;
   } catch (error) {
-    core.error('AWS EC2 instance starting error');
+    core.error('AWS EC2 instance launch error');
     throw error;
   }
 }
@@ -92,7 +95,7 @@ async function terminateEc2Instance() {
   try {
     const command = new TerminateInstancesCommand(input);
     await client.send(command);
-    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} is terminated`);
+    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} has terminated`);
     return;
   } catch (error) {
     core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
