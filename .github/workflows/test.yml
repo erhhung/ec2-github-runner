@@ -24,7 +24,7 @@ jobs:
       # https://github.com/erhhung/ec2-github-runner
       - name: Launch Test EC2 Runner
         id: runner
-        uses: .
+        uses: ./
         env:
           RUN_INFO: ${{ github.run_id }}-${{ github.run_attempt }}
         with:
@@ -104,7 +104,7 @@ jobs:
       # https://github.com/erhhung/ec2-github-runner
       - name: Terminate Test EC2 Runner
         id: runner
-        uses: .
+        uses: ./
         with:
           mode: stop
           github-token: ${{ secrets.RUNNER_GITHUB_REPOS_PAT }}
