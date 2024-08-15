@@ -16,13 +16,13 @@ inputs:
     description: >-
       GitHub Personal Access Token with the 'repo' scope assigned.
     required: true
-  ec2-image-id:
+  image-id:
     description: >-
       EC2 Image ID (AMI). The new runner will be launched from this image.
       This action is compatible with Amazon Linux 2023 images.
       This input is required if you use the 'start' mode.
     required: false
-  ec2-instance-type:
+  instance-type:
     description: >-
       EC2 Instance Type.
       This input is required if you use the 'start' mode.
@@ -46,7 +46,7 @@ inputs:
       Use these labels to remove the runner from GitHub when the runner is no longer needed.
       This input is required if you use the 'stop' mode.
     required: false
-  ec2-instance-id:
+  instance-id:
     description: >-
       EC2 Instance ID of the created runner.
       This ID is provided by the output of the action in 'start' mode.
@@ -106,7 +106,7 @@ outputs:
       These labels are used in two cases:
         - to use as the 'runs-on' property value of subsequent jobs;
         - to remove the runner from GitHub when it is no longer needed.
-  ec2-instance-id:
+  instance-id:
     description: >-
       EC2 Instance ID of the created runner.
       This ID is used to terminate the EC2 instance when the runner is no longer needed.

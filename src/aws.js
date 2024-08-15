@@ -51,8 +51,8 @@ async function startEc2Instance(labels, githubRegistrationToken) {
   const input = {
     MinCount: 1,
     MaxCount: 1,
-    ImageId: config.input.ec2ImageId,
-    InstanceType: config.input.ec2InstanceType,
+    ImageId: config.input.imageId,
+    InstanceType: config.input.instanceType,
     InstanceMarketOptions: config.input.spotInstance ? { MarketType: 'spot' } : undefined,
     EbsOptimized: true,
     BlockDeviceMappings: [
@@ -77,31 +77,31 @@ async function startEc2Instance(labels, githubRegistrationToken) {
   try {
     const command = new RunInstancesCommand(input);
     const response = await client.send(command);
-    const ec2InstanceId = response.Instances[0].InstanceId;
-    core.info(`AWS EC2 instance ${ec2InstanceId} has started`);
-    return ec2InstanceId;
+    const instanceId = response.Instances[0].InstanceId;
+    core.info(`AWS EC2 instance ${instanceId} has started`);
+    return instanceId;
   } catch (error) {
     core.error('AWS EC2 instance launch error');
     throw error;
   }
 }
 
-async function waitForInstanceRunning(ec2InstanceId) {
+async function waitForInstanceRunning(instanceId) {
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-client-ec2/Variable/waitUntilInstanceRunning
   const params = {
     client: client,
     maxWaitTime: 60 * 5,
   };
   const input = {
-    InstanceIds: [ec2InstanceId],
+    InstanceIds: [instanceId],
   };
 
   try {
     await waitUntilInstanceRunning(params, input);
-    core.info(`AWS EC2 instance ${ec2InstanceId} is up and running`);
+    core.info(`AWS EC2 instance ${instanceId} is up and running`);
     return;
   } catch (error) {
-    core.error(`AWS EC2 instance ${ec2InstanceId} initialization error`);
+    core.error(`AWS EC2 instance ${instanceId} initialization error`);
     throw error;
   }
 }
@@ -109,16 +109,16 @@ async function waitForInstanceRunning(ec2InstanceId) {
 async function terminateEc2Instance() {
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/ec2/command/TerminateInstancesCommand
   const input = {
-    InstanceIds: [config.input.ec2InstanceId],
+    InstanceIds: [config.input.instanceId],
   };
 
   try {
     const command = new TerminateInstancesCommand(input);
     await client.send(command);
-    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} has terminated`);
+    core.info(`AWS EC2 instance ${config.input.instanceId} has terminated`);
     return;
   } catch (error) {
-    core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
+    core.error(`AWS EC2 instance ${config.input.instanceId} termination error`);
     throw error;
   }
 }

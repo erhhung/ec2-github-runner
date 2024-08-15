@@ -2,10 +2,10 @@
 
 [![awesome-runners](https://img.shields.io/badge/listed%20on-awesome--runners-blue.svg)](https://github.com/jonico/awesome-runners)
 
-Start your EC2 [self-hosted runner](https://docs.github.com/en/free-pro-team@latest/actions/hosting-your-own-runners) right before you need it.
-Run the job on it.
-Finally, stop it when you finish.
-And all this automatically as a part of your GitHub Actions workflow.
+Launch a new EC2 [self-hosted runner](https://docs.github.com/en/free-pro-team@latest/actions/hosting-your-own-runners) right before you need it.
+Run one or more jobs on it.
+Terminate it when your jobs are done.
+All this automatically as part of your GitHub Actions workflow.
 
 ![GitHub Actions self-hosted EC2 runner](docs/images/github-actions-summary.png)
 
@@ -17,19 +17,21 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 - Migrated use of **AWS SDK for JavaScript** from v2 to v3 to suppress deprecation warnings.
 
-- Added option to launch the EC2 instance as a **Spot instance** (see `spot-instance` input).
+- Added option to launch the EC2 instance as a **Spot instance** (`spot-instance` input).
 
-- Added options to specify the type and size of the **root EBS volume** (see `root-volume-device`, `root-volume-type`, and `root-volume-size` inputs).
+- Added options to specify the type and size of the **root EBS volume** (`root-volume-device`, `root-volume-type`, and `root-volume-size` inputs).
 
-- Renamed `label` input to **`labels`** to accept one or more labels (as CSV) to pass to the runner's `config.sh` script. <br>
+- Dropped the **`ec2-` prefix** on inputs and outputs with that prefix (~~`ec2-`~~`image-id`, ~~`ec2-`~~`instance-type`, and ~~`ec2-`~~`instance-id`).
+
+- Renamed `label` input to **`labels`** to accept one or more labels (as CSV) to pass to the runner's `config.sh` script.
   The `label` output is similarly renamed to **`labels`** and is the set of input labels, if any, plus a randomly generated ID.
 
-- Regardless if any resource tags were provided as input, a **Labels tag** will always be added that includes any labels provided as input, plus the unique, generated label.
+- Regardless if any resource tags were provided as input, a **Labels tag** will always be added that includes any input labels plus the unique, generated label.
 
 - EC2 instance user data script will always install the **latest version** of the [GitHub Actions Runner](https://github.com/actions/runner/releases/latest) _(this may or may not cause an issue)._
 
-- `pre-runner-script` input can span more than one line (improved the creation of the `pre-runner-script.sh` file), <br>
-  and that script will get `source`d in a Bash shell with `-e -u -x -o pipefail` options.
+- `pre-runner-script` input can span more than one line (improved the creation of the `pre-runner-script.sh` file),
+  and that script will get `source`d in a Bash shell with `-euo pipefail` options.
 
 - Added `--unattended` as an extra parameter to the runner's `config.sh` script (see [issue #197](https://github.com/machulav/ec2-github-runner/issues/197)).
 
@@ -222,12 +224,12 @@ Now you're ready to go!
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mode`                                                                                                                                                                       | Always required.                           | Specify here which mode you want to use: <br><br> - `start` - to start a new runner; <br> - `stop` - to stop the previously created runner.                                                                                                                                                                                           |
 | `github-token`                                                                                                                                                               | Always required.                           | GitHub Personal Access Token with the `repo` scope assigned.                                                                                                                                                                                                                                                                          |
-| `ec2-image-id`                                                                                                                                                               | Required if you use the `start` mode.      | EC2 Image ID (AMI). <br><br> The new runner will be launched from this image. <br><br> This action is compatible with Amazon Linux 2023 images.                                                                                                                                                                                       |
-| `ec2-instance-type`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Instance Type.                                                                                                                                                                                                                                                                                                                    |
+| `image-id`                                                                                                                                                                   | Required if you use the `start` mode.      | EC2 Image ID (AMI). <br><br> The new runner will be launched from this image. <br><br> This action is compatible with Amazon Linux 2023 images.                                                                                                                                                                                       |
+| `instance-type`                                                                                                                                                              | Required if you use the `start` mode.      | EC2 Instance Type.                                                                                                                                                                                                                                                                                                                    |
 | `subnet-id`                                                                                                                                                                  | Required if you use the `start` mode.      | VPC Subnet ID. <br><br> The subnet should belong to the same VPC as the specified security group.                                                                                                                                                                                                                                     |
 | `security-group-id`                                                                                                                                                          | Required if you use the `start` mode.      | EC2 Security Group ID. <br><br> The security group should belong to the same VPC as the specified subnet. <br><br> Only outbound traffic for port 443 should be allowed. No inbound traffic is required.                                                                                                                              |
 | `labels`                                                                                                                                                                     | Required if you use the `stop` mode.       | Name(s) (in CSV form) of unique labels to assign to the runner. <br><br> These labels will be appended to by the output of the action in the `start` mode to include a unique ID. <br><br> Use these labels to remove the runner from GitHub when the runner is no longer needed.                                                     |
-| `ec2-instance-id`                                                                                                                                                            | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> This ID is provided by the output of the action in `start` mode. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                          |
+| `instance-id`                                                                                                                                                                | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> This ID is provided by the output of the action in `start` mode. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                          |
 | `iam-role-name`                                                                                                                                                              | Optional. Used only with the `start` mode. | IAM role name to attach to the created EC2 runner. <br><br> This allows the runner to have permissions to run additional actions within the AWS account, without having to manage additional GitHub secrets and AWS users. <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
 | `spot-instance`                                                                                                                                                              | Optional. Used only with the `start` mode. | Whether to launch the runner as a Spot instance. <br><br> If set to `'true'`, the runner will be launched as a Spot instance with default options.                                                                                                                                                                                    |
 | `root-volume-device`                                                                                                                                                         | Optional. Used only with the `start` mode. | Root volume device name. <br><br> The default value is `/dev/xvda`, but depends on the AMI used.                                                                                                                                                                                                                                      |
@@ -253,7 +255,7 @@ We recommend using the [aws-actions/configure-aws-credentials](https://github.co
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `labels`                                                                                                                                                                     | Name(s) (in CSV form) of input labels, if any, plus a unique label assigned to the runner. <br><br> These labels are used in two cases: <br> - to use as the `runs-on` property value of subsequent jobs; <br> - to remove the runner from GitHub when it is no longer needed. |
-| `ec2-instance-id`                                                                                                                                                            | EC2 Instance ID of the created runner. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                                             |
+| `instance-id`                                                                                                                                                                | EC2 Instance ID of the created runner. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                                             |
 | `runner-name`                                                                                                                                                                | Name of the created runner. <br><br> This is the EC2 instance hostname, which may be customized by the `pre-runner-script`.                                                                                                                                                    |
 
 ### Example
@@ -284,15 +286,15 @@ jobs:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           labels: prod,AL2023
-          ec2-image-id: ami-123
-          ec2-instance-type: t3.nano
+          image-id: ami-123
+          instance-type: t4g.nano
           subnet-id: subnet-123
           security-group-id: sg-123
-          iam-role-name: my-role-name   # optional, requires additional permissions
+          iam-role-name: role-name      # optional, requires additional permissions
           spot-instance: 'true'         # optional, default is 'false'
           root-volume-device: /dev/xvda # optional, default is /dev/xvda
           root-volume-type: gp3         # optional, default is gp3
-          root-volume-size: '16'        # optional, default is '8' GiB
+          root-volume-size: '10'        # optional, default is '8' GiB
           aws-resource-tags: >          # optional, requires additional permissions
             [
               {"Key": "Name", "Value": "github-runner-${{ env.RUN_INFO }}"},
@@ -313,13 +315,13 @@ jobs:
           labels-json=["${csv//,/\",\"}"]
           EOF
     outputs:
-      labels-csv:  '${{ steps.prepare-output.outputs.labels-csv }}'
-      labels-json: '${{ steps.prepare-output.outputs.labels-json }}'
-      instance-id:  ${{ steps.start-runner.outputs.ec2-instance-id }}
       runner-name:  ${{ steps.start-runner.outputs.runner-name }}
+      instance-id:  ${{ steps.start-runner.outputs.instance-id }}
+      labels-json: '${{ steps.prepare-output.outputs.labels-json }}'
+      labels-csv:  '${{ steps.prepare-output.outputs.labels-csv }}'
 
   do-the-job:
-    name: Do the job on the runner
+    name: Do the job on ${{ needs.launch-runner.outputs.runner-name }}
     needs: launch-runner # required to start the main job when the runner is ready
     runs-on: ${{ fromJSON( needs.launch-runner.outputs.labels-json ) }} # run the job on the newly created runner
     steps:
@@ -346,7 +348,7 @@ jobs:
           mode: stop
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           labels: ${{ needs.launch-runner.outputs.labels-csv }}
-          ec2-instance-id: ${{ needs.launch-runner.outputs.instance-id }}
+          instance-id: ${{ needs.launch-runner.outputs.instance-id }}
 ```
 
 ### Real user examples

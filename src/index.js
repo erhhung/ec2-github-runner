@@ -5,7 +5,7 @@ const gh = require('./gh');
 
 function setOutput(labels, instanceId, runnerName) {
   core.setOutput('labels', labels);
-  core.setOutput('ec2-instance-id', instanceId);
+  core.setOutput('instance-id', instanceId);
   core.setOutput('runner-name', runnerName);
 }
 

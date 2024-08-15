@@ -6,12 +6,12 @@ class Config {
     this.input = {
       mode: core.getInput('mode'),
       githubToken: core.getInput('github-token'),
-      ec2ImageId: core.getInput('ec2-image-id'),
-      ec2InstanceType: core.getInput('ec2-instance-type'),
+      imageId: core.getInput('image-id'),
+      instanceType: core.getInput('instance-type'),
       subnetId: core.getInput('subnet-id'),
       securityGroupId: core.getInput('security-group-id'),
       labels: core.getInput('labels'),
-      ec2InstanceId: core.getInput('ec2-instance-id'),
+      instanceId: core.getInput('instance-id'),
       iamRoleName: core.getInput('iam-role-name'),
       spotInstance: core.getBooleanInput('spot-instance'),
       rootVolumeDevice: core.getInput('root-volume-device'),
@@ -54,11 +54,11 @@ class Config {
     }
 
     if (this.input.mode === 'start') {
-      if (!this.input.ec2ImageId || !this.input.ec2InstanceType || !this.input.subnetId || !this.input.securityGroupId) {
+      if (!this.input.imageId || !this.input.instanceType || !this.input.subnetId || !this.input.securityGroupId) {
         throw new Error(`Not all the required inputs are provided for the 'start' mode`);
       }
     } else if (this.input.mode === 'stop') {
-      if (!this.input.labels || !this.input.ec2InstanceId) {
+      if (!this.input.labels || !this.input.instanceId) {
         throw new Error(`Not all the required inputs are provided for the 'stop' mode`);
       }
     } else {
