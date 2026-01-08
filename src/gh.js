@@ -13,7 +13,7 @@ async function getRunner(labels) {
       runners = _.filter(runners, { labels: [{ name: label }] });
     }
     return runners.length > 0 ? runners[0] : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

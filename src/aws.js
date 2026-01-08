@@ -65,8 +65,20 @@ async function startEc2Instance(labels, githubRegistrationToken) {
         },
       },
     ],
-    SubnetId: config.input.subnetId,
-    SecurityGroupIds: [config.input.securityGroupId],
+    // if assigning public IP, subnet and SG are specified as part of the ENI
+    SubnetId: config.input.assignPublicIp ? undefined : config.input.subnetId,
+    SecurityGroupIds: config.input.assignPublicIp ? undefined : [config.input.securityGroupId],
+    NetworkInterfaces: config.input.assignPublicIp
+      ? [
+          {
+            DeviceIndex: 0,
+            SubnetId: config.input.subnetId,
+            Groups: [config.input.securityGroupId],
+            AssociatePublicIpAddress: true,
+            DeleteOnTermination: true,
+          },
+        ]
+      : undefined,
     IamInstanceProfile: { Name: config.input.iamRoleName },
     UserData: Buffer.from(userData.join('\n')).toString('base64'),
     TagSpecifications: config.tagSpecifications,

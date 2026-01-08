@@ -19,6 +19,8 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 - Added option to launch the EC2 instance as a **Spot instance** (`spot-instance` input).
 
+- Added option to **assign public IP** address to the EC2 instance (`assign-public-ip` input).
+
 - Added options to specify the type and size of the **root EBS volume** (`root-volume-device`, `root-volume-type`, and `root-volume-size` inputs).
 
 - Dropped the **`ec2-` prefix** on inputs and outputs with that prefix (~~`ec2-`~~`image-id`, ~~`ec2-`~~`instance-type`, and ~~`ec2-`~~`instance-id`).
@@ -109,6 +111,7 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
      "Version": "2012-10-17",
      "Statement": [
        {
+         "Sid": "LaunchAndTerminateInstances",
          "Effect": "Allow",
          "Action": [
            "ec2:RunInstances",
@@ -122,7 +125,7 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
    }
    ```
 
-   If you plan to attach an IAM role to the EC2 runner with the `iam-role-name` parameter, you will need to allow additional permissions:
+   If you plan to launch the EC2 runner as a Spot Instance using the `spot-instance` parameter, you will need to allow this permission:
 
    <!-- prettier-ignore -->
    ```json
@@ -130,16 +133,35 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
      "Version": "2012-10-17",
      "Statement": [
        {
+         "Sid": "CreateServiceLinkedRole",
+         "Effect": "Allow",
+         "Action": "iam:CreateServiceLinkedRole",
+         "Resource": "*",
+         "Condition": {
+           "StringEquals": {
+             "iam:AWSServiceName": "spot.amazonaws.com"
+           }
+         }
+       }
+     ]
+   }
+   ```
+
+   If you plan to attach an IAM role to the EC2 runner with the `iam-role-name` parameter, you will need to allow these permissions:
+
+   <!-- prettier-ignore -->
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "AssociateInstanceProfile",
          "Effect": "Allow",
          "Action": [
+           "ec2:AssociateIamInstanceProfile",
            "ec2:ReplaceIamInstanceProfileAssociation",
-           "ec2:AssociateIamInstanceProfile"
+           "iam:PassRole"
          ],
-         "Resource": "*"
-       },
-       {
-         "Effect": "Allow",
-         "Action": "iam:PassRole",
          "Resource": "*"
        }
      ]
@@ -148,13 +170,15 @@ Use the following steps to prepare your workflow for running on your EC2 self-ho
 
    If you use the `aws-resource-tags` parameter, you will also need to allow the permissions to create tags:
 
+   <!-- prettier-ignore -->
    ```json
    {
      "Version": "2012-10-17",
      "Statement": [
        {
+         "Sid": "CreateInstanceTags",
          "Effect": "Allow",
-         "Action": ["ec2:CreateTags"],
+         "Action": "ec2:CreateTags",
          "Resource": "*",
          "Condition": {
            "StringEquals": {
@@ -231,6 +255,7 @@ Now you're ready to go!
 | `labels`                                                                                                                                                                     | Required if you use the `stop` mode.       | Name(s) (in CSV form) of unique labels to assign to the runner. <br><br> These labels will be appended to by the output of the action in the `start` mode to include a unique ID. <br><br> Use these labels to remove the runner from GitHub when the runner is no longer needed.                                                     |
 | `instance-id`                                                                                                                                                                | Required if you use the `stop` mode.       | EC2 Instance ID of the created runner. <br><br> This ID is provided by the output of the action in `start` mode. <br><br> This ID is used to terminate the EC2 instance when the runner is no longer needed.                                                                                                                          |
 | `iam-role-name`                                                                                                                                                              | Optional. Used only with the `start` mode. | IAM role name to attach to the created EC2 runner. <br><br> This allows the runner to have permissions to run additional actions within the AWS account, without having to manage additional GitHub secrets and AWS users. <br><br> Setting this requires additional AWS permissions for the role launching the instance (see above). |
+| `assign-public-ip`                                                                                                                                                           | Optional. Used only with the `start` mode. | Whether to assign a public IP address to the launched EC2 instance. <br><br> If set to 'true', the runner will be assigned a public IP address. <br><br> This is required if the runner is in a public subnet and there is no NAT gateway in the VPC.                                                                                 |
 | `spot-instance`                                                                                                                                                              | Optional. Used only with the `start` mode. | Whether to launch the runner as a Spot instance. <br><br> If set to `'true'`, the runner will be launched as a Spot instance with default options.                                                                                                                                                                                    |
 | `root-volume-device`                                                                                                                                                         | Optional. Used only with the `start` mode. | Root volume device name. <br><br> The default value is `/dev/xvda`, but depends on the AMI used.                                                                                                                                                                                                                                      |
 | `root-volume-type`                                                                                                                                                           | Optional. Used only with the `start` mode. | Root volume type. <br><br> The default value is `gp3`.                                                                                                                                                                                                                                                                                |
@@ -291,6 +316,7 @@ jobs:
           subnet-id: subnet-123
           security-group-id: sg-123
           iam-role-name: role-name      # optional, requires additional permissions
+          assign-public-ip: 'true'      # optional, default is 'false'
           spot-instance: 'true'         # optional, default is 'false'
           root-volume-device: /dev/xvda # optional, default is /dev/xvda
           root-volume-type: gp3         # optional, default is gp3

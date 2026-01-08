@@ -58,6 +58,13 @@ inputs:
       IAM Role Name to attach to the created EC2 instance.
       This requires additional permissions on the AWS role used to launch instances.
     required: false
+  assign-public-ip:
+    description: >-
+      Whether to assign a public IP address to the launched EC2 instance.
+      If set to 'true', the runner will be assigned a public IP address.
+      This is required if the runner is in a public subnet and there is no NAT gateway in the VPC.
+    required: false
+    default: 'false'
   spot-instance:
     description: >-
       Whether to launch the runner as a Spot instance.

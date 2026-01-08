@@ -13,6 +13,7 @@ class Config {
       labels: core.getInput('labels'),
       instanceId: core.getInput('instance-id'),
       iamRoleName: core.getInput('iam-role-name'),
+      assignPublicIp: core.getBooleanInput('assign-public-ip'),
       spotInstance: core.getBooleanInput('spot-instance'),
       rootVolumeDevice: core.getInput('root-volume-device'),
       rootVolumeType: core.getInput('root-volume-type'),

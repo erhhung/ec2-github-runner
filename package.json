@@ -1,7 +1,15 @@
 {
   "name": "ec2-github-runner",
+  "version": "3.1.0",
   "description": "GitHub Action for automatic creation and registration AWS EC2 instance as a GitHub Actions self-hosted runner.",
-  "author": "Volodymyr Machula",
+  "contributors": [
+    {
+      "name": "Volodymyr Machula"
+    },
+    {
+      "name": "Erhhung Yuan"
+    }
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -23,8 +31,11 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
     "@vercel/ncc": "^0.38.1",
     "dotenv": "^16.4.5",
-    "eslint": "^9.8.0"
+    "eslint": "^9.8.0",
+    "globals": "^17.0.0"
   }
 }
