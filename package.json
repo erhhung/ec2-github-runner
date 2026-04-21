@@ -1,6 +1,6 @@
 {
   "name": "ec2-github-runner",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "GitHub Action for automatic creation and registration AWS EC2 instance as a GitHub Actions self-hosted runner.",
   "contributors": [
     {
@@ -20,22 +20,25 @@
     "url": "https://github.com/erhhung/ec2-github-runner/issues"
   },
   "scripts": {
-    "index": "node -r dotenv/config ./src/index.js",
     "lint": "eslint ./src/*.js",
-    "package": "ncc build ./src/index.js"
+    "index": "node -r dotenv/config ./src/index.js",
+    "package": "ncc build ./src/index.js -o ./dist"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "^6.0.0",
-    "@aws-sdk/client-ec2": "^3.627.0",
-    "lodash": "^4.17.21"
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1",
+    "@aws-sdk/client-ec2": "^3.1033.0",
+    "lodash": "^4.18.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.3",
-    "@eslint/js": "^9.39.2",
-    "@vercel/ncc": "^0.38.1",
-    "dotenv": "^16.4.5",
-    "eslint": "^9.8.0",
-    "globals": "^17.0.0"
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
+    "@vercel/ncc": "^0.38.4",
+    "dotenv": "^16.6.1",
+    "eslint": "^9.39.4",
+    "globals": "^17.5.0"
   }
 }

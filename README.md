@@ -39,7 +39,7 @@ The following changes were made in **this fork** of the upstream GitHub repo [ma
 
 - Added `runner-name` output. It is the EC2 instance hostname, which may be customized by the `pre-runner-script`.
 
-**NOTE:** Due to the renaming of an input parameter, the major version (at time of fork) has been bumped from the upstream release to **`v3`**.
+**NOTE:** Due to the renaming of an input parameter, the major version (at time of fork) has been bumped from the upstream release to **`v3`**; **`v4`** is now compatible with Node.js 24.
 
 <br>
 
@@ -304,7 +304,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Start EC2 runner
         id: start-runner
-        uses: erhhung/ec2-github-runner@v3
+        uses: erhhung/ec2-github-runner@v4
         env:
           RUN_INFO: ${{ github.run_id }}-${{ github.run_attempt }}
         with:
@@ -363,13 +363,13 @@ jobs:
     if: ${{ always() }} # required to stop the runner even if errors occurred in previous jobs
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Stop EC2 runner
-        uses: erhhung/ec2-github-runner@v3
+        uses: erhhung/ec2-github-runner@v4
         with:
           mode: stop
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
